@@ -1,0 +1,20 @@
+diff --git a/core/rfb.js b/core/rfb.js
+index 03703c8..93c15a3 100644
+--- a/core/rfb.js
++++ b/core/rfb.js
+@@ -1051,7 +1051,6 @@ export default class RFB extends EventTargetMixin {
+                 let mime = clipdata[i].types[ti];
+ 
+                 switch (mime) {
+-                    case 'image/png':
+                     case 'text/plain':
+                     case 'text/html':
+                         let blob = await clipdata[i].getType(mime);
+@@ -1080,6 +1079,7 @@ export default class RFB extends EventTargetMixin {
+                         dataset.push(data);
+                         Log.Debug('Sending mime type: ' + mime);
+                         break;
++                    case 'image/png':
+                     default:
+                         Log.Info('skipping clip send mime type: ' + mime)
+                 }

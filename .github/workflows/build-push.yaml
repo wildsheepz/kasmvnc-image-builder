@@ -1,0 +1,99 @@
+name: Build and Push Docker Images with Provenance and SBOM
+
+on:
+  push:
+    branches:
+      - main  # Or your main/release branch
+  workflow_dispatch: # Allow manual triggering
+
+permissions:
+  contents: read  # Needed for checkout
+  id-token: write # Needed for OIDC authentication with Docker Hub/AWS ECR/GCR, etc.
+  packages: write # Needed to push to GitHub Container Registry
+  actions: read   # Needed to read the actions runtime token
+  security-events: write # Needed for uploading SBOMs (important for transparency)
+
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        target: [lens, keepassxc, chrome]  # Define your build targets
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          version: latest # Important: Use a recent version for provenance features
+          buildkitd-flags: --debug  # Enable debug logging (optional, helpful for troubleshooting)
+
+      - name: Log in to Docker Registry
+        # Choose ONE of the login methods below, based on your registry:
+        # --- Docker Hub ---
+        uses: docker/login-action@v3
+        with:
+          registry: docker.io  # Default, can be omitted.
+          username: ${{ secrets.DOCKER_USER }} # Use the actor (user triggering the workflow)
+          password: ${{ secrets.DOCKER_TOKEN }} # Use a Personal Access Token (PAT) *NOT* your password
+
+      - name: Build and Push Docker Image (with Provenance and SBOM)
+        uses: docker/build-push-action@v5
+        with:
+          context: . # Root of the repository (adjust if your Dockerfile is in a subdirectory)
+          file: ./Dockerfile   # Use a target-specific Dockerfile (e.g., Dockerfile.app1)
+          target: ${{ matrix.target }}
+          platforms: linux/amd64 #,linux/arm64  # Example: Build for multiple architectures (optional). Remove if not needed.
+          push: true
+          tags: |
+            kuanyong/kasmvnc-${{ matrix.target }}:latest
+            kuanyong/kasmvnc-${{ matrix.target }}:${{ github.sha }}
+          build-args: |
+            BUILD_DATE=${{ github.event.head_commit.timestamp || github.event.workflow_dispatch.created_at || '' }} # Pass build-time arguments.  Important: Use a fallback.
+            VCS_REF=${{ github.sha }}
+            # ... any other build args your Dockerfile needs
+          # --- Provenance ---
+          provenance: mode=max    # Enable provenance (SLSA Level 2)
+          # You can customize provenance attributes, but the defaults are usually fine.
+          # See: https://docs.docker.com/build/attestations/provenance/#customize-the-provenance-attestation
+
+          # --- SBOM ---
+          sbom: true     # Enable SBOM generation (using Syft by default)
+           #  sbom: github/sbom-action@v1.0.1 #  Specify the GitHub Action to generate an SBOM.  Consider using this if you need more control.
+          # See: https://docs.docker.com/build/attestations/sbom/
+
+          # Output load to remove the need of docker load after the image is built. (Useful for subsequent steps)
+          outputs: type=image,oci-mediatypes=true,push=true # Important for provenance and SBOM to be included in the push.
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      # Example: Upload SBOM as an artifact (optional, but recommended)
+      - name: Upload SBOM as artifact
+        uses: actions/upload-artifact@v4
+        if: always() # Always upload, even if the build fails (important for debugging)
+        with:
+          name: sbom-${{ matrix.target }}
+          path: |
+            *.sbom.*
+          retention-days: 7  # Adjust as needed
+
+      # Example: Further processing/scanning of the SBOM (optional)
+      # - name: Scan SBOM with Grype
+      #   uses: anchore/grype-action@v1 # Or another SBOM scanning tool
+      #   with:
+      #     path: sbom.spdx.json  # Adjust path if your SBOM filename is different
+      #     fail-on: high      # Fail the workflow if high severity vulnerabilities are found
+      #     # ... other Grype options
+
+      # Example: Sign the image with Cosign (optional, but highly recommended for production)
+      - name: Sign image with Cosign (keyless signing)
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' # Only sign on pushes to main (or your release branch)
+        # NOTE: keyless signing does not require managing private keys
+        run: |
+             cosign sign --yes kuanyong/kasmvnc-${{ matrix.target }}:${{ github.sha }}
+        env:
+             COSIGN_EXPERIMENTAL: 1
+        continue-on-error: true  # signing failures shouldn't break the build, but should be investigated.
