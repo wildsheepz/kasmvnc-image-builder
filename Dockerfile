@@ -1,26 +1,26 @@
 FROM ubuntu:jammy AS base
 ARG BUILDKIT_SBOM_SCAN_STAGE=true
 ARG KASMVNC_VERSION=1.3.3
-RUN apt update && apt install wget openbox tar curl ssl-cert dbus-x11 sudo ca-certificates git xterm -y --no-install-recommends && \
+RUN apt update && apt install wget openbox tar curl ssl-cert dbus-x11 sudo ca-certificates git xterm --no-install-recommends -y && \
     wget https://github.com/kasmtech/KasmVNC/releases/download/v${KASMVNC_VERSION}/kasmvncserver_jammy_${KASMVNC_VERSION}_amd64.deb && \
     apt install -y ./kasmvncserver_jammy_${KASMVNC_VERSION}_amd64.deb && \
     rm ./kasmvncserver_jammy_${KASMVNC_VERSION}_amd64.deb && \
     make-ssl-cert generate-default-snakeoil && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
+COPY kasmvnc-freeze-fix.patch /tmp/kasmvnc-freeze-fix.patch
 RUN curl -fsSL https://deb.nodesource.com/setup_18.x -o- | bash && \
     apt update && apt-get install -y nodejs && \
     node -v && \
     npm -v && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
-
-COPY kasmvnc-freeze-fix.patch /tmp/kasmvnc-freeze-fix.patch
-RUN echo "network:\n    protocol: http\n    interface: 0.0.0.0\n    use_ipv4: true\n    udp:\n      public_ip: 127.0.0.1\n      port: auto\n      stun_server: null\n" > /etc/kasmvnc/kasmvnc.yaml && \
+    echo "network:\n    protocol: http\n    interface: 0.0.0.0\n    use_ipv4: true\n    udp:\n      public_ip: 127.0.0.1\n      port: auto\n      stun_server: null\n" > /etc/kasmvnc/kasmvnc.yaml && \
     GIT_SSL_NO_VERIFY=true git clone https://github.com/kasmtech/noVNC.git /usr/share/kasmvnc/noVNC && \ 
     (cd /usr/share/kasmvnc/noVNC && git checkout 5c46b2e13ab1dd7232b28f017fd7e49ca740f5a4) && \
     (cd /usr/share/kasmvnc/noVNC && git apply /tmp/kasmvnc-freeze-fix.patch && npm install && npm run build) && \
     mv /usr/share/kasmvnc/www /usr/share/kasmvnc/www.old && \
-    ln -sf /usr/share/kasmvnc/noVNC/dist /usr/share/kasmvnc/www
+    ln -sf /usr/share/kasmvnc/noVNC/dist /usr/share/kasmvnc/www && \
+    apt remove nodejs --purge --autoremove -y && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
 
 ARG CUSTOM_USER=user
 ARG PUID=1001
@@ -33,7 +33,7 @@ RUN groupadd ${CUSTOM_USER}  -g ${PGID} && \
     echo 'echo 127.0.0.1 `hostname` | sudo tee -a /etc/hosts' >> /entrypoint.sh && \
     echo 'echo -e "${VNC_PW}\n${VNC_PW}\n" | kasmvncpasswd -u kasm_user -wo' >> /entrypoint.sh && \
     echo 'trap exit INT TERM' >> /entrypoint.sh && \
-    echo "kasmvncserver $DISPLAY -websocketPort 6901 -FrameRate=60 -interface 0.0.0.0 -BlacklistThreshold=0 -FreeKeyMappings -PreferBandwidth -DynamicQualityMin=4 -DynamicQualityMax=7 -DLP_ClipDelay=0 -sslOnly 0 -DisableBasicAuth -UseIPv6 0" >> /entrypoint.sh && \
+    echo 'kasmvncserver $DISPLAY -websocketPort 6901 -FrameRate=60 -interface 0.0.0.0 -BlacklistThreshold=0 -FreeKeyMappings -PreferBandwidth -DynamicQualityMin=4 -DynamicQualityMax=7 -DLP_ClipDelay=0 -sslOnly 0 -DisableBasicAuth -UseIPv6 0' >> /entrypoint.sh && \
     chmod +x /entrypoint.sh && \
     echo "${CUSTOM_USER} ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/${CUSTOM_USER} 
 

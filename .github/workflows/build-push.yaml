@@ -4,6 +4,7 @@ on:
   push:
     branches:
       - main  # Or your main/release branch
+      - master  # Or your main/release branch
   workflow_dispatch: # Allow manual triggering
 
 permissions:
