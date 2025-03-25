@@ -1,7 +1,7 @@
 FROM ubuntu:jammy AS base
 ARG BUILDKIT_SBOM_SCAN_STAGE=true
 ARG KASMVNC_VERSION=1.3.3
-RUN apt update && apt install wget openbox tar curl ssl-cert dbus-x11 sudo ca-certificates git -y --no-install-recommends && \
+RUN apt update && apt install wget openbox tar curl ssl-cert dbus-x11 sudo ca-certificates git xterm -y --no-install-recommends && \
     wget https://github.com/kasmtech/KasmVNC/releases/download/v${KASMVNC_VERSION}/kasmvncserver_jammy_${KASMVNC_VERSION}_amd64.deb && \
     apt install -y ./kasmvncserver_jammy_${KASMVNC_VERSION}_amd64.deb && \
     rm ./kasmvncserver_jammy_${KASMVNC_VERSION}_amd64.deb && \
