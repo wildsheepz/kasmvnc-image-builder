@@ -29,6 +29,7 @@ RUN groupadd ${CUSTOM_USER}  -g ${PGID} && \
     useradd ${CUSTOM_USER}  -u ${PUID} -g ${PGID} -m -s /bin/bash && \
     usermod -aG video,audio,ssl-cert,sudo ${CUSTOM_USER} && \
     echo "#!/bin/bash" > /entrypoint.sh && \
+    echo "rm -rf /tmp/.X*" && \
     echo "sudo hostname -F /etc/hostname" >> /entrypoint.sh && \
     echo 'echo 127.0.0.1 `hostname` | sudo tee -a /etc/hosts' >> /entrypoint.sh && \
     echo 'echo -e "${VNC_PW}\n${VNC_PW}\n" | kasmvncpasswd -u kasm_user -wo' >> /entrypoint.sh && \
@@ -64,7 +65,7 @@ RUN apt update && apt install -y keepassxc --no-install-recommends && \
 RUN echo "sudo chown -R ${CUSTOM_USER}:${CUSTOM_USER} /home/${CUSTOM_USER}/.config/keepassxc" >> /entrypoint.sh 
 RUN echo "while [ true ]; do keepassxc ; sleep 1; done" >> /entrypoint.sh 
 USER ${CUSTOM_USER}
-VOLUME /home/${CUSTOM_USER} /.config/keepassxc
+VOLUME /home/${CUSTOM_USER}/.config/keepassxc
 
 FROM base AS chrome
 ARG BUILDKIT_SBOM_SCAN_CONTEXT=true
@@ -75,11 +76,14 @@ RUN apt update && \
     apt install -y ./google-chrome-stable_current_amd64.deb systemd --no-install-recommends && \
     rm google-chrome-stable_current_amd64.deb && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
-RUN echo "sudo chown -R ${CUSTOM_USER}:${CUSTOM_USER} /home/${CUSTOM_USER} /.config /home/${CUSTOM_USER}/.cache" >> /entrypoint.sh 
+RUN echo "sudo chown -R ${CUSTOM_USER}:${CUSTOM_USER} /home/${CUSTOM_USER}/.cache" >> /entrypoint.sh 
+RUN echo "sudo chown -R ${CUSTOM_USER}:${CUSTOM_USER} /home/${CUSTOM_USER}/.config" >> /entrypoint.sh 
+RUN echo "sudo chown -R ${CUSTOM_USER}:${CUSTOM_USER} /home/${CUSTOM_USER}/.pki" >> /entrypoint.sh 
 RUN echo 'while [ true ]; do (set -x;google-chrome-stable --disable-dev-shm-usage $FLAGS); sleep 3; done' >> /entrypoint.sh 
 USER ${CUSTOM_USER} 
-VOLUME /home/${CUSTOM_USER} /.config/google-chrome/
-VOLUME /home/${CUSTOM_USER} /.cache/google-chrome/
+VOLUME /home/${CUSTOM_USER}/.config/google/
+VOLUME /home/${CUSTOM_USER}/.config/google-chrome/
+VOLUME /home/${CUSTOM_USER}/.cache/google-chrome/
 
 FROM base AS lens
 ARG BUILDKIT_SBOM_SCAN_CONTEXT=true
@@ -112,4 +116,4 @@ RUN apt update && apt install unzip -y && curl "https://awscli.amazonaws.com/aws
 RUN echo "sudo chown -R ${CUSTOM_USER}:${CUSTOM_USER} /home/${CUSTOM_USER}/.config/Lens" >> /entrypoint.sh 
 RUN echo "while [ true ]; do /opt/Lens/lens-desktop ; sleep 1; done" >> /entrypoint.sh 
 USER ${CUSTOM_USER}
-VOLUME /home/${CUSTOM_USER} /.config/Lens
+VOLUME /home/${CUSTOM_USER}/.config/Lens

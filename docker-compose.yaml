@@ -1,0 +1,46 @@
+version: "3"
+
+services:
+  lens:
+    image: kuanyong/kasmvnc-lens:latest
+    environment:
+      CUSTOM_USER: ${USER}
+      PUID: ${PUID}
+      PGID: ${PGID}
+    privileged: true
+    # restart: always # lens start up seems quite heavy on CPU so it might make booting up slower
+    volumes:
+      - /home/${USER}/.minikube:/home/${USER}/.minikube
+      - /home/${USER}/.kube:/home/${USER}/.kube
+      - /etc/ssl/certs/:/etc/ssl/certs/
+      - /usr/local/share/ca-certificates/:/usr/local/share/ca-certificates/
+      - ./apt_proxy.conf:/etc/apt/apt.conf.d/proxy.conf
+      - /etc/machine-id:/etc/machine-id
+      - /home/${USER}/.config/Lens:/home/${USER}/.config/Lens
+      - /home/${USER}/.config/gcloud:/home/${USER}/.config/gcloud
+      - /home/${USER}/.config/aws:/home/${USER}/.config/aws
+    ports:
+      - 9994:6901
+
+  chrome:
+    container_name: chrome
+    image: kuanyong/kasmvnc-chrome:latest
+    environment:
+      PUID: ${PUID}
+      PGID: ${PGID}
+      FLAGS: "--no-default-browser-check --restore-last-session --wm-window-animations-disabled --disable-gpu"
+    privileged: true
+    restart: always
+    volumes:
+      - /etc/ssl/certs/:/etc/ssl/certs/
+      - /usr/local/share/ca-certificates/:/usr/local/share/ca-certificates/
+      - /home/${USER}/.pki:/home/${USER}/.pki
+      - /home/${USER}/Downloads:/home/${USER}/Downloads
+      - /etc/machine-id:/etc/machine-id
+      - /home/${USER}/.config/google-chrome:/home/${USER}/.config/google-chrome
+      - /home/${USER}/.config/google:/home/${USER}/.config/google
+      - /home/${USER}/.cache/google-chrome:/home/${USER}/.cache/google-chrome
+      - /etc/hostname:/etc/hostname
+    shm_size: "1gb" #optional
+    ports:
+      - 9992:6901
