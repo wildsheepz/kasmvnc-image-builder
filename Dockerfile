@@ -29,14 +29,13 @@ RUN groupadd ${CUSTOM_USER}  -g ${PGID} && \
     useradd ${CUSTOM_USER}  -u ${PUID} -g ${PGID} -m -s /bin/bash && \
     usermod -aG video,audio,ssl-cert,sudo ${CUSTOM_USER} && \
     echo "#!/bin/bash" > /entrypoint.sh && \
-    echo "rm -rf /tmp/.X*" && \
+    echo 'trap exit INT TERM' >> /entrypoint.sh && \
     echo "sudo hostname -F /etc/hostname" >> /entrypoint.sh && \
     echo 'echo 127.0.0.1 `hostname` | sudo tee -a /etc/hosts' >> /entrypoint.sh && \
     echo 'echo -e "${VNC_PW}\n${VNC_PW}\n" | kasmvncpasswd -u kasm_user -wo' >> /entrypoint.sh && \
-    echo 'trap exit INT TERM' >> /entrypoint.sh && \
-    echo 'kasmvncserver $DISPLAY -websocketPort 6901 -FrameRate=60 -interface 0.0.0.0 -BlacklistThreshold=0 -FreeKeyMappings -PreferBandwidth -DynamicQualityMin=4 -DynamicQualityMax=7 -DLP_ClipDelay=0 -sslOnly 0 -DisableBasicAuth -UseIPv6 0' >> /entrypoint.sh && \
+    echo 'while [ true ]; do (echo DISPLAY=$DISPLAY; kasmvncserver -list | grep -P "$DISPLAY\s+" || (rm -rf /tmp/.X* && kasmvncserver $DISPLAY -websocketPort 6901 -FrameRate=60 -interface 0.0.0.0 -BlacklistThreshold=0 -FreeKeyMappings -PreferBandwidth -DynamicQualityMin=4 -DynamicQualityMax=7 -DLP_ClipDelay=0 -sslOnly 0 -DisableBasicAuth -UseIPv6 0) && echo Wait 5s for Xvnc to start && sleep 5); kasmvncserver -list | grep -B2 -P "$DISPLAY\s+" && break; done' >> /entrypoint.sh && \
     chmod +x /entrypoint.sh && \
-    echo "${CUSTOM_USER} ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/${CUSTOM_USER} 
+    echo "${CUSTOM_USER} ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/${CUSTOM_USER}
 
 RUN sed -i \
     -e 's/NLIMC/NLMC/g' \
