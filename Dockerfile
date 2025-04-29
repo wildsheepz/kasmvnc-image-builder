@@ -87,17 +87,8 @@ VOLUME /home/${CUSTOM_USER}/.cache/google-chrome/
 FROM base AS lens
 ARG BUILDKIT_SBOM_SCAN_CONTEXT=true
 USER root
-ARG LENS_VERSION=2025.2.141554-latest
+ARG LENS_VERSION
 WORKDIR /home/${CUSTOM_USER}
-RUN apt update && \
-    curl https://downloads.k8slens.dev/apt/debian/pool/stable/main/Lens-${LENS_VERSION}_amd64.deb -o k8slens-latest_amd64.deb && \
-    apt-get install -y ./k8slens-latest_amd64.deb  libasound2 && \
-    mv /opt/Lens/lens-desktop /opt/Lens/lens-desktop-bin && \
-    echo '2>&1 NODE_TLS_REJECT_UNAUTHORIZED=0 /opt/Lens/lens-desktop-bin $@ > /tmp/lens-desktop.logs' > /opt/Lens/lens-desktop && \
-    chmod +x /opt/Lens/lens-desktop && \
-    rm ./k8slens-latest_amd64.deb && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
-
 RUN apt update && apt install -y gpg && \
     curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg && \
     echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" > /etc/apt/sources.list.d/google.list && \
@@ -110,6 +101,16 @@ RUN apt update && apt install unzip -y && curl "https://awscli.amazonaws.com/aws
     ./aws/install -b /usr/local/bin && \
     rm -f awscliv2.zip  && \
     aws --version && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+RUN apt update && \
+    [ ! -n "${LENS_VERSION}" ] && LENS_VERSION=$(curl https://forums.k8slens.dev/c/announcements/release-notes/56 | grep -Po "class='title.*\<" | grep -Po '20\d\d\.\d+\.\d+-latest' | python3 -c 'import sys;input = sys.stdin.read();array = input.splitlines();array.sort(reverse=True);print(array[0])') || LENS_VERSION=${LENS_VERSION} && \
+    curl https://downloads.k8slens.dev/apt/debian/pool/stable/main/Lens-${LENS_VERSION}_amd64.deb -o k8slens-latest_amd64.deb && \
+    apt-get install -y ./k8slens-latest_amd64.deb  libasound2 && \
+    mv /opt/Lens/lens-desktop /opt/Lens/lens-desktop-bin && \
+    echo '2>&1 NODE_TLS_REJECT_UNAUTHORIZED=0 /opt/Lens/lens-desktop-bin $@ > /tmp/lens-desktop.logs' > /opt/Lens/lens-desktop && \
+    chmod +x /opt/Lens/lens-desktop && \
+    rm ./k8slens-latest_amd64.deb && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 RUN echo "sudo chown -R ${CUSTOM_USER}:${CUSTOM_USER} /home/${CUSTOM_USER}/.config/Lens" >> /entrypoint.sh 
