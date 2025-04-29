@@ -87,7 +87,7 @@ VOLUME /home/${CUSTOM_USER}/.cache/google-chrome/
 FROM base AS lens
 ARG BUILDKIT_SBOM_SCAN_CONTEXT=true
 USER root
-ARG LENS_VERSION=2024.4.230844-latest
+ARG LENS_VERSION=2025.2.141554-latest
 WORKDIR /home/${CUSTOM_USER}
 RUN apt update && \
     curl https://downloads.k8slens.dev/apt/debian/pool/stable/main/Lens-${LENS_VERSION}_amd64.deb -o k8slens-latest_amd64.deb && \
