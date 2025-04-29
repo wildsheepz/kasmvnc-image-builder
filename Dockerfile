@@ -23,8 +23,8 @@ RUN curl -fsSL https://deb.nodesource.com/setup_18.x -o- | bash && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
 ARG CUSTOM_USER=user
-ARG PUID=1001
-ARG PGID=1001
+ARG PUID=1000
+ARG PGID=1000
 RUN groupadd ${CUSTOM_USER}  -g ${PGID} && \
     useradd ${CUSTOM_USER}  -u ${PUID} -g ${PGID} -m -s /bin/bash && \
     usermod -aG video,audio,ssl-cert,sudo ${CUSTOM_USER} && \
