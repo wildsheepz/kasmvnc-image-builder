@@ -22,12 +22,12 @@ RUN curl -fsSL https://deb.nodesource.com/setup_18.x -o- | bash && \
     apt remove nodejs --purge --autoremove -y && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-ARG CUSTOM_USER=user
+ARG CUSTOM_USERNAME=container_user
 ARG PUID=1000
 ARG PGID=1000
-RUN groupadd ${CUSTOM_USER}  -g ${PGID} && \
-    useradd ${CUSTOM_USER}  -u ${PUID} -g ${PGID} -m -s /bin/bash && \
-    usermod -aG video,audio,ssl-cert,sudo ${CUSTOM_USER} && \
+RUN groupadd ${CUSTOM_USERNAME}  -g ${PGID} && \
+    useradd ${CUSTOM_USERNAME}  -u ${PUID} -g ${PGID} -m -s /bin/bash && \
+    usermod -aG video,audio,ssl-cert,sudo ${CUSTOM_USERNAME} && \
     echo "#!/bin/bash" > /entrypoint.sh && \
     echo 'trap exit INT TERM' >> /entrypoint.sh && \
     echo "sudo hostname -F /etc/hostname" >> /entrypoint.sh && \
@@ -35,7 +35,7 @@ RUN groupadd ${CUSTOM_USER}  -g ${PGID} && \
     echo 'echo -e "${VNC_PW}\n${VNC_PW}\n" | kasmvncpasswd -u kasm_user -wo' >> /entrypoint.sh && \
     echo 'while [ true ]; do (echo DISPLAY=$DISPLAY; kasmvncserver -list | grep -P "$DISPLAY\s+" || (rm -rf /tmp/.X* && kasmvncserver $DISPLAY -websocketPort 6901 -FrameRate=60 -interface 0.0.0.0 -BlacklistThreshold=0 -FreeKeyMappings -PreferBandwidth -DynamicQualityMin=4 -DynamicQualityMax=7 -DLP_ClipDelay=0 -sslOnly 0 -DisableBasicAuth -UseIPv6 0) && echo Wait 5s for Xvnc to start && sleep 5); kasmvncserver -list | grep -B2 -P "$DISPLAY\s+" && break; done' >> /entrypoint.sh && \
     chmod +x /entrypoint.sh && \
-    echo "${CUSTOM_USER} ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/${CUSTOM_USER}
+    echo "${CUSTOM_USERNAME} ALL=(ALL) NOPASSWD: ALL" > /etc/sudoers.d/${CUSTOM_USERNAME}
 
 RUN sed -i \
     -e 's/NLIMC/NLMC/g' \
@@ -45,7 +45,7 @@ RUN sed -i \
     echo "**** theme ****" && \
     curl -s https://raw.githubusercontent.com/thelamer/lang-stash/master/theme.tar.gz \
     | tar xzvf - -C /usr/share/themes/Clearlooks/openbox-3/ 
-USER ${CUSTOM_USER} 
+USER ${CUSTOM_USERNAME} 
 RUN mkdir -p $HOME/.vnc && \
     echo "exec openbox-session" > $HOME/.vnc/xstartup && \
     touch "$HOME/.vnc/.de-was-selected" && \
@@ -61,10 +61,10 @@ ARG BUILDKIT_SBOM_SCAN_CONTEXT=true
 USER root
 RUN apt update && apt install -y keepassxc --no-install-recommends && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
-RUN echo "sudo chown -R ${CUSTOM_USER}:${CUSTOM_USER} /home/${CUSTOM_USER}/.config/keepassxc" >> /entrypoint.sh 
+RUN echo "sudo chown -R ${CUSTOM_USERNAME}:${CUSTOM_USERNAME} /home/${CUSTOM_USERNAME}/.config/keepassxc" >> /entrypoint.sh 
 RUN echo "while [ true ]; do keepassxc ; sleep 1; done" >> /entrypoint.sh 
-USER ${CUSTOM_USER}
-VOLUME /home/${CUSTOM_USER}/.config/keepassxc
+USER ${CUSTOM_USERNAME}
+VOLUME /home/${CUSTOM_USERNAME}/.config/keepassxc
 
 FROM base AS chrome
 ARG BUILDKIT_SBOM_SCAN_CONTEXT=true
@@ -75,20 +75,20 @@ RUN apt update && \
     apt install -y ./google-chrome-stable_current_amd64.deb systemd --no-install-recommends && \
     rm google-chrome-stable_current_amd64.deb && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
-RUN echo "sudo chown -R ${CUSTOM_USER}:${CUSTOM_USER} /home/${CUSTOM_USER}/.cache" >> /entrypoint.sh 
-RUN echo "sudo chown -R ${CUSTOM_USER}:${CUSTOM_USER} /home/${CUSTOM_USER}/.config" >> /entrypoint.sh 
-RUN echo "sudo chown -R ${CUSTOM_USER}:${CUSTOM_USER} /home/${CUSTOM_USER}/.pki" >> /entrypoint.sh 
+RUN echo "sudo chown -R ${CUSTOM_USERNAME}:${CUSTOM_USERNAME} /home/${CUSTOM_USERNAME}/.cache" >> /entrypoint.sh 
+RUN echo "sudo chown -R ${CUSTOM_USERNAME}:${CUSTOM_USERNAME} /home/${CUSTOM_USERNAME}/.config" >> /entrypoint.sh 
+RUN echo "sudo chown -R ${CUSTOM_USERNAME}:${CUSTOM_USERNAME} /home/${CUSTOM_USERNAME}/.pki" >> /entrypoint.sh 
 RUN echo 'while [ true ]; do (set -x;google-chrome-stable --disable-dev-shm-usage $FLAGS); sleep 3; done' >> /entrypoint.sh 
-USER ${CUSTOM_USER} 
-VOLUME /home/${CUSTOM_USER}/.config/google/
-VOLUME /home/${CUSTOM_USER}/.config/google-chrome/
-VOLUME /home/${CUSTOM_USER}/.cache/google-chrome/
+USER ${CUSTOM_USERNAME} 
+VOLUME /home/${CUSTOM_USERNAME}/.config/google/
+VOLUME /home/${CUSTOM_USERNAME}/.config/google-chrome/
+VOLUME /home/${CUSTOM_USERNAME}/.cache/google-chrome/
 
 FROM base AS lens
 ARG BUILDKIT_SBOM_SCAN_CONTEXT=true
 USER root
 ARG LENS_VERSION
-WORKDIR /home/${CUSTOM_USER}
+WORKDIR /home/${CUSTOM_USERNAME}
 RUN apt update && apt install -y gpg && \
     curl https://packages.cloud.google.com/apt/doc/apt-key.gpg | sudo gpg --dearmor -o /usr/share/keyrings/cloud.google.gpg && \
     echo "deb [signed-by=/usr/share/keyrings/cloud.google.gpg] https://packages.cloud.google.com/apt cloud-sdk main" > /etc/apt/sources.list.d/google.list && \
@@ -113,7 +113,7 @@ RUN apt update && \
     rm ./k8slens-latest_amd64.deb && \
     apt-get clean && rm -rf /var/lib/apt/lists/*
 
-RUN echo "sudo chown -R ${CUSTOM_USER}:${CUSTOM_USER} /home/${CUSTOM_USER}/.config/Lens" >> /entrypoint.sh 
+RUN echo "sudo chown -R ${CUSTOM_USERNAME}:${CUSTOM_USERNAME} /home/${CUSTOM_USERNAME}/.config/Lens" >> /entrypoint.sh 
 RUN echo "while [ true ]; do /opt/Lens/lens-desktop ; sleep 1; done" >> /entrypoint.sh 
-USER ${CUSTOM_USER}
-VOLUME /home/${CUSTOM_USER}/.config/Lens
+USER ${CUSTOM_USERNAME}
+VOLUME /home/${CUSTOM_USERNAME}/.config/Lens

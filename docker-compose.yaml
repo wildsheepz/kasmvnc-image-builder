@@ -4,7 +4,6 @@ services:
   lens:
     image: kuanyong/kasmvnc-lens:latest
     environment:
-      CUSTOM_USER: ${USER}
       PUID: 1000
       PGID: 1000
     privileged: true # needed otherwise lens would not run
@@ -28,7 +27,6 @@ services:
     container_name: chrome
     image: kuanyong/kasmvnc-chrome:latest
     environment:
-      CUSTOM_USER: ${USER}
       PUID: 1000
       PGID: 1000
       FLAGS: "--no-default-browser-check --restore-last-session --wm-window-animations-disabled --disable-gpu"
