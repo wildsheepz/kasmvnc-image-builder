@@ -5,20 +5,22 @@ services:
     image: kuanyong/kasmvnc-lens:latest
     environment:
       CUSTOM_USER: ${USER}
-      PUID: ${PUID}
-      PGID: ${PGID}
-    privileged: true
-    # restart: always # lens start up seems quite heavy on CPU so it might make booting up slower
+      PUID: 1000
+      PGID: 1000
+    privileged: true # needed otherwise lens would not run
+    # restart: always
     volumes:
       - /home/${USER}/.minikube:/home/${USER}/.minikube
       - /home/${USER}/.kube:/home/${USER}/.kube
       - /etc/ssl/certs/:/etc/ssl/certs/
+      - /home/${USER}/.pki:/home/${USER}/.pki
       - /usr/local/share/ca-certificates/:/usr/local/share/ca-certificates/
-      - ./apt_proxy.conf:/etc/apt/apt.conf.d/proxy.conf
       - /etc/machine-id:/etc/machine-id
       - /home/${USER}/.config/Lens:/home/${USER}/.config/Lens
       - /home/${USER}/.config/gcloud:/home/${USER}/.config/gcloud
       - /home/${USER}/.config/aws:/home/${USER}/.config/aws
+      - /etc/hostname:/etc/hostname
+    shm_size: "1gb" #optional
     ports:
       - 9994:6901
 
@@ -26,9 +28,11 @@ services:
     container_name: chrome
     image: kuanyong/kasmvnc-chrome:latest
     environment:
-      PUID: ${PUID}
-      PGID: ${PGID}
+      CUSTOM_USER: ${USER}
+      PUID: 1000
+      PGID: 1000
       FLAGS: "--no-default-browser-check --restore-last-session --wm-window-animations-disabled --disable-gpu"
+      NO_PROXY: ${NO_PROXY}
     privileged: true
     restart: always
     volumes:
